@@ -13,11 +13,17 @@ import time
 # AIzaSyBVe6JKhw13H2uGgV2kcaEmfOj0Xx05qhU
 
 results = dict()
-google_places = GooglePlaces('AIzaSyBTZG5t73rg_6q0XOsRv9pPOUoRsb7nbOo')
+google_places = GooglePlaces('AIzaSyBVe6JKhw13H2uGgV2kcaEmfOj0Xx05qhU')
 
-lat_start = 51.463468 #51.517468 - 10*0.0004
-lng_start =  -0.043681  # -0.133681
+new = False
 
+lng_start = -0.158681 # -0.103681
+lat_start = 51.530468
+
+#lat_start = 51.463468 #51.517468 - 10*0.0004
+#lng_start =  -0.043681  # -0.133681
+lat_inc_start = 0
+lng_inc_start = 0
 
 # long_center = -0.153681 # -0.103681
 # lat_center = 51.493468
@@ -30,24 +36,25 @@ position = {'lat': lat_start , 'lng': lng_start}
 #position = {'lat': 51.514333 , 'lng':-0.133681}
 
 try:
-	with open('Eatplaces_greenwich.json', 'r') as fp:
+	with open('Eatplaces.json', 'r') as fp:
 	    results = json.load(fp)
 except Exception as inst:
 	print "New File	" , inst
 	pass
 
-if 'start_position' in results:
-	print("resuming start corner")
-	lat_start = results['start_position']['lat']
-	lng_start = results['start_position']['lng']
+if new == False:
+	if 'start_position' in results:
+		print("resuming start corner")
+		lat_start = results['start_position']['lat']
+		lng_start = results['start_position']['lng']
 
-if 'current_position' in results:
-	print("resuming start position")
-	lat_inc_start = results['current_position']['lat']
-	lng_inc_start = results['current_position']['lng']
-else:
-	lat_inc_start = 0
-	lng_inc_start = 0
+	if 'current_position' in results:
+		print("resuming start position")
+		lat_inc_start = results['current_position']['lat']
+		lng_inc_start = results['current_position']['lng']
+	else:
+		lat_inc_start = 0
+		lng_inc_start = 0
 
 results['start_position'] = {'lat': lat_start , 'lng': lng_start}
 
@@ -57,15 +64,15 @@ try:
 
 	for lat_inc in range(0,40):
 
-		position['lat'] = lat_start + lat_inc*0.0014
+		position['lat'] = lat_start + lat_inc*0.0010
 
-		for lng_inc in range(0, 30):
+		for lng_inc in range(0, 60):
 			
 			if (lat_inc < lat_inc_start) | ((lat_inc <= lat_inc_start) & (lng_inc < lng_inc_start)) :
 				# Already scanned area
 				continue		
 			
-			position['lng'] = lng_start + (lat_inc % 2)*0.002/2  + lng_inc*0.002
+			position['lng'] = lng_start + (lat_inc % 2)*0.0015/2  + lng_inc*0.0015
 			
 			last_query_result = google_places.nearby_search(lat_lng = position, radius=120, types=[types.TYPE_FOOD])			
 
@@ -101,8 +108,8 @@ except Exception as inst:
 	print "some Error" , inst
 	pass
 
-with open('Eatplaces_greenwich.p', 'wb') as fp:
+with open('Eatplaces.p', 'wb') as fp:
     pickle.dump(results, fp)
 
-with open('Eatplaces_greenwich.json', 'w') as fp:
+with open('Eatplaces.json', 'w') as fp:
 	json.dump(results,fp)
