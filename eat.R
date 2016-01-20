@@ -1,4 +1,5 @@
 input = RJSONIO::fromJSON("eat/Eatplaces.json")
+border = RJSONIO::fromJSON("eat/london_borough_boundaries.json")['features']
 a = input[sapply(input, length)>2]
 
 library('plyr')
@@ -51,7 +52,7 @@ lond.map = get_map(location = lond,  color = "bw", maptype = "toner")
 qmplot(lon , lat , data = london_eat, color = I("red"), zoom = 14, alpha=1) 
 ggmap(lond.map) %+% london_eat + aes(x = lon, y = lat) +
   geom_density2d() +
-  stat_density2d(aes(fill = ..level.., alpha = log(..level..)),size = 0.05, n=100, geom = 'polygon') +
+  stat_density2d(aes(fill = log(..level..), alpha = log(..level..)),size = 0.05, n=100, geom = 'polygon') +
   scale_fill_gradient(low = "green", high = "red") +
   scale_alpha(range = c(0.00, 0.25), guide = FALSE)
 
