@@ -1,6 +1,35 @@
 input = RJSONIO::fromJSON("eat/Eatplaces.json")
-border = RJSONIO::fromJSON("eat/london_borough_boundaries.json")['features']
 a = input[sapply(input, length)>2]
+
+require("geojson")
+regions_df = geojson_read("eat/london_borough_boundaries.geojson", what = "sp")
+
+regions_l = list()
+
+for (i in 0:length(regions_df)){
+  regions_l[i] = SpatialPolygons(regions_df@polygons[i],proj4string = regions_df@proj4string)
+}
+
+
+contains <-function(regions, point ){
+  
+  sp <- SpatialPoints(point)
+  output = -1
+  
+  for (region in regions){
+    if (gContains(region,sp)==TRUE){
+      output = strtoi(region@polygons[[1]]@ID,10L)
+      break
+    }
+  }
+  
+  output  
+  
+}
+
+rm(regions_df)
+
+
 
 library('plyr')
 library('reshape2')
@@ -15,6 +44,7 @@ lat = list()
 price = list()
 rating = list()
 name = list()
+region = list()
 
 for (i in 1:length(a)){
   #''position = {'lat': 51.517468, 'lng':-0.133681}'
@@ -25,11 +55,18 @@ for (i in 1:length(a)){
   rating[i] = a[[i]]$rating
   name[i] = a[[i]]$name
   
+  region[i] = contains(regions_l,data.frame(lon=long[[i]], lat=lat[[i]]))
   
 }
 
-london_eat = data.frame( "lon" = unlist(long), "lat" = unlist(lat), "price" = unlist(price),"rating" = unlist(rating), "name" = unlist(name))
-names(london_eat) = c('lon','lat','price','rating','name')
+london_eat = data.frame( "lon" = unlist(long), 
+                         "lat" = unlist(lat), 
+                         "price" = unlist(price),
+                         "rating" = unlist(rating), 
+                         "name" = unlist(name)
+                         "region" = unlist(region))
+
+names(london_eat) = c('lon','lat','price','rating','name','region')
 
 long_center = -0.1220681
 lat_center = 51.520468

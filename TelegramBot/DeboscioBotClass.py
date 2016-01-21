@@ -2,6 +2,7 @@
 from telegram import Updater, Bot, ReplyKeyboardMarkup, ForceReply, ReplyKeyboardHide
 from WhereToEat import WhereToEat
 from random import randint, sample
+import logging
 
 class DeboscioBot:
 	
@@ -17,9 +18,11 @@ class DeboscioBot:
 
 		self.bot = Updater(auth_key)
 		self.manualbot = Bot(token=auth_key)
+		
 		# Get the dispatcher to register handlers
 		dp = self.bot.dispatcher
 
+		# Register commands
 		dp.addTelegramCommandHandler("start", self.start)
 		dp.addTelegramCommandHandler("enable", self.enable)
 		dp.addTelegramCommandHandler("eat", self.eat)
@@ -34,18 +37,21 @@ class DeboscioBot:
 			return self.users[user_id].enabled
 
 	def message_event(self, bot, message):
+		# Is it a new chat
 		if not (self.is_a_new_chat(message.chat.id)):
-			print("new chat")
+			logging.debug("new chat")
 			self.chats[message.chat.id] = DeboscioChat(message)			
 			result = bot.sendMessage(message.chat.id, text='Hi ' + message.from_user.first_name)
 		else:
-			print("old chat")
+			logging.debug("old chat")
 			self.chats[message.chat.id].add_msg(message)
 
+	    # Is it a new user
 		if not (self.is_a_new_user(message.from_user.id)):
-			print("new user")
+			logging.debug("new user")
 			self.users[message.from_user.id] = DeboscioUser(message.from_user)			
 
+		# Is it a msg with location
 		if (message.location is not None):
 			self.users[message.from_user.id].set_location(message.location.latitude, message.location.longitude)
 			result = bot.sendMessage(message.chat.id, text='I got the new position')
@@ -67,28 +73,25 @@ class DeboscioBot:
 		self.message_event(bot,update.message)
 		bot.sendMessage(update.message.chat_id, text='Nobody can helps you!')
 
-
-
 	def eat(self, bot, update):
 		self.message_event(bot,update.message)
 
 		# do I've a location for this user?
 		user = self.users[update.message.from_user.id]
 		if not (isinstance(user.latitude, float) and isinstance(user.longitude,float)):
+			bot.sendMessage(update.message.chat_id, text=user.first_name + ' send me your location.')
 			return
 
-		print("calling out")
+		bot.sendChatAction(chat_id=update.message.chat_id, action=telegram.ChatAction.TYPING)
+		logging.debug("Looking for a place...")
 		places = self.whereeat.find_places(update.message.chat_id, update.message.from_user.id, user.latitude, user.longitude, max_results = 3)
-		print(places)
+		logging.debug(places)
 
 		reply_markup = ReplyKeyboardMarkup([places])
 		bot.sendMessage(update.message.chat_id, text='Choose', reply_markup = reply_markup)
 		
 		self.chat_user_actions[(update.message.chat_id, update.message.from_user.id)] = self.whereeat.select_place
 
-#				bot.sendMessage(update.message.chat_id, text=eat.name + ' R: ' + str(eat.rating) + ' P: ' + str(eat.price_level))
-#				bot.sendLocation(update.message.chat_id, latitude=float(eat.geo_location['lat']), longitude=float(eat.geo_location['lng']))
-		
 
 	def enable(self, bot, update):
 		self.message_event(bot,update.message)
@@ -99,10 +102,12 @@ class DeboscioBot:
 		#print("Sent reply: " + str(self.enable_msg_id[val.chat_id]))
 
 	def echo(self, bot, update):
-		self.message_event(bot,update.message)
 		if not self.chats[update.message.chat.id].active:
 			return
-		print(update.message)
+
+		self.message_event(bot,update.message)
+
+		logging.debug(update.message)
 		
 		# Check if the msg is a reply to a previous command
 		if (update.message.chat_id, update.message.from_user.id) in self.chat_user_actions:
@@ -135,7 +140,7 @@ class DeboscioBot:
 
 
 	def error(bot, update, error):
-		logger.warn('Update "%s" caused error "%s"' % (update, error))
+		loggin.warn('Update "%s" caused error "%s"' % (update, error))
 		raise ValueError('Parameter should...')
 
 
