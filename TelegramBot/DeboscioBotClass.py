@@ -38,7 +38,7 @@ class DeboscioBot:
 
 	def message_event(self, bot, message):
 		# Is it a new chat
-		if not (self.is_a_new_chat(message.chat.id)):
+		if (self.is_a_new_chat(message.chat.id)):
 			logging.debug("new chat")
 			self.chats[message.chat.id] = DeboscioChat(message)			
 			result = bot.sendMessage(message.chat.id, text='Hi ' + message.from_user.first_name)
@@ -47,7 +47,7 @@ class DeboscioBot:
 			self.chats[message.chat.id].add_msg(message)
 
 	    # Is it a new user
-		if not (self.is_a_new_user(message.from_user.id)):
+		if (self.is_a_new_user(message.from_user.id)):
 			logging.debug("new user")
 			self.users[message.from_user.id] = DeboscioUser(message.from_user)			
 
@@ -57,11 +57,11 @@ class DeboscioBot:
 			result = bot.sendMessage(message.chat.id, text='I got the new position')
 
 	def is_a_new_chat(self, chat_id):
-		return chat_id in self.chats
+		return not (chat_id in self.chats)
 
 
 	def is_a_new_user(self, user_id):
-		return user_id in self.users
+		return not (user_id in self.users)
 
 
 	def start(self, bot, update):
@@ -102,8 +102,9 @@ class DeboscioBot:
 		#print("Sent reply: " + str(self.enable_msg_id[val.chat_id]))
 
 	def echo(self, bot, update):
-		if not self.chats[update.message.chat.id].active:
-			return
+		if not (self.is_a_new_chat(update.message.chat.id)):
+			if not (self.chats[update.message.chat.id].active):
+				return
 
 		self.message_event(bot,update.message)
 
