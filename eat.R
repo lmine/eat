@@ -1,4 +1,4 @@
-input = RJSONIO::fromJSON("eat/Eatplaces.json")
+input = RJSONIO::fromJSON("Eatplaces.json")
 a = input[sapply(input, length)>2]
 
 require("geojson")
@@ -55,7 +55,7 @@ for (i in 1:length(a)){
   rating[i] = a[[i]]$rating
   name[i] = a[[i]]$name
   
-  region[i] = contains(regions_l,data.frame(lon=long[[i]], lat=lat[[i]]))
+#  region[i] = contains(regions_l,data.frame(lon=long[[i]], lat=lat[[i]]))
   
 }
 

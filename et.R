@@ -1,16 +1,25 @@
+require("zoo")
+library("RcppRoll")
 require("dplyr")
 require("ggplot2")
 require("reshape2")
 
 EventDescription = c("Unknown","Click","Open","Unsub","Sent")
 
+
+# origin=as.POSIXlt(strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S", tz="UTC"))
+# tmp$FirstDate =  as.POSIXlt(tmp$first,origin = origin)
+# tmp$LastDate =  as.POSIXlt(tmp$last,origin = origin)
+
+
 EventLookup <- function(id){
   EventDescription[id]
 }
 
-unSub = read.csv("R/unSubInNov2015.csv")
+unSub = read.csv("Projects/DS/MSM/ET/unSubInNov2015.csv")
 names(unSub) = c("CRMEmailKey","SourceCode","EventTypeId","EventDateTime")
-unSub$EventUnixtime = as.numeric(as.POSIXct(unSub$EventDateTime, format="%d%b%Y:%H:%M:%S"))
+unSub$EventUnixtime = (as.POSIXct(unSub$EventDateTime, format="%d%b%Y:%H:%M:%S"))
+unSub$EventUnixdate = (as.POSIXct(unSub$EventDateTime, format="%d%b%Y"))
 unSub$EventTypeDescr = sapply(unSub$EventTypeId, EventLookup)
 
 
@@ -23,6 +32,45 @@ unSub.sent = filter(unSub, EventTypeId == 5) %>% group_by(CRMEmailKey) %>%
             fSent = n()/(1+(max(EventUnixtime)-min(EventUnixtime))/(60*60*24)),
             cSent = n()) %>%  filter(cSent<10, cSent>1, daysSentActivity < 10) %>%
   arrange(desc(CRMEmailKey))
+
+rollwin <- function(c,t,size) {
+  time_s = zoo(c,t)
+  time_s.c = merge(time_s, zoo(,seq(start(time_s),end(time_s),by="1 day")), all=TRUE)
+  max(rollapply(time_s,size,sum,partial=TRUE))
+}
+
+unSub.sent = filter(unSub, EventTypeId == 5) %>% 
+  arrange(CRMEmailKey, EventUnixdate) %>%
+  group_by(CRMEmailKey, EventUnixdate) %>%
+  summarise( c = n()) %>%
+  group_by(CRMEmailKey) %>%
+  do(data.frame(total = sum(.$c)
+                ,burst2 = rollwin(.$c,.$EventUnixdate,2)
+                ,burst3 = rollwin(.$c,.$EventUnixdate,3)
+                ,burst7 = rollwin(.$c,.$EventUnixdate,7)
+                ,burst30 = rollwin(.$c,.$EventUnixdate,30)
+                ,firstSent = min(.$EventUnixdate)
+                ,lastSent = max(.$EventUnixdate)
+                ,daysOpenActivity = max(.$EventUnixdate) - min(.$EventUnixdate)
+                ))
+  
+unSub.sent = unSub.sent[1:4,]
+
+
+t = zoo(unSub.sent$c,unSub.sent$EventUnixdate)
+t.c = merge(t, zoo(,seq(start(t),end(t),by="1 day")), all=TRUE)
+t.c[is.na(t.c)] <- 0
+
+rollapply(t.c,6,sum)
+
+
+# %>%
+#  group_by(CRMEmailKey) %>%
+#  mutate(roll_sum2 = roll_sum(EventUnixtime,2,c(-1)))
+
+# roll_sum(count, 2, align = "right", fill = NAoll_sum(count, 2, align = "right", fill = NA)
+
+
 unSub.open = filter(unSub, EventTypeId == 3) %>% group_by(CRMEmailKey) %>% 
   summarise(firstOpen = min(EventUnixtime), 
             lastOpen = max(EventUnixtime), 
